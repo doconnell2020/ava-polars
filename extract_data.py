@@ -17,7 +17,7 @@ def get_URLs(initial_url: str) -> List[str]:
     returns: List[str]
     """
     urls = [initial_url]
-    data = requests.get(url).json()
+    data = requests.get(initial_url).json()
     total_events = data['count']
     events_per_page = len(data['results'])
     num_pages = int(total_events/events_per_page) + 1
@@ -53,9 +53,9 @@ def generate_canadian_avalanche_data(incident_ids: List[str]) -> str:
         ).json()
         new_df = pd.json_normalize(data)
         df = pd.concat([df, new_df])
-    df.to_csv("/home/david/Documents/ARU/AvalancheProject/demo/data/can_avs_raw.csv")
+    df.to_csv("./data/can_avs_raw.csv")
 
-    return "Data was saved at /home/david/Documents/ARU/AvalancheProject/demo/data/can_avs.csv"
+    return "Data was saved."
 
 
 def main() -> None:
