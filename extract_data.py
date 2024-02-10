@@ -2,14 +2,15 @@ import time
 import pandas as pd
 import requests
 from typing import List
+import logging
 
-start = time.time()
+logging.basicConfig(level=logging.INFO)
 
 
 def get_URLs(initial_url: str) -> List[str]:
     """
     Generates a List of URLs based on the expected format of the API enpoints and
-    the number of events and events per page. This is ~15x faster than visiting 
+    the number of events and events per page. This is ~15x faster than visiting
     each endpoint to find the next one.
     The `initial_url` acts as a jumping off point to begin the iteration.
 
@@ -18,16 +19,15 @@ def get_URLs(initial_url: str) -> List[str]:
     """
     urls = [initial_url]
     data = requests.get(initial_url).json()
-    total_events = data['count']
-    events_per_page = len(data['results'])
-    num_pages = int(total_events/events_per_page) + 1
+    total_events = data["count"]
+    events_per_page = len(data["results"])
+    num_pages = int(total_events / events_per_page) + 1
     if num_pages < 2:
         pass
     else:
         for i in range(2, num_pages + 1):
             urls.append(f"{initial_url}&page={i}")
     return urls
-    
 
 
 # Next we need to visit each url and extract each id
@@ -37,10 +37,10 @@ def get_incident_ids(URLS: List[str]) -> List[str]:
     params: URLS: List[str]
     returns: ids: List[str]
     """
-    ids = pd.Series(name='results', dtype='str')
+    ids = pd.Series(name="results", dtype="str")
     for url in URLS:
-        new_ids = pd.read_json(url)['results'].apply(lambda row: row['id'])
-        ids = pd.concat([ids,new_ids])
+        new_ids = pd.read_json(url)["results"].apply(lambda row: row["id"])
+        ids = pd.concat([ids, new_ids])
     return ids.to_list()
 
 
@@ -59,9 +59,17 @@ def generate_canadian_avalanche_data(incident_ids: List[str]) -> str:
 
 
 def main() -> None:
+    logging.info("Starting get_URLS")
     urls = get_URLs("https://incidents.avalanche.ca/public/incidents/?format=json")
+    logging.info("Finished get_URLS")
+    logging.info("Starting get_incident_ids")
+
     incident_ids = get_incident_ids(urls)
+    logging.info("Finished get_incident_ids")
+    logging.info("Starting generate_canadian_avalanche_data")
     generate_canadian_avalanche_data(incident_ids)
+    logging.info("Finished generate_canadian_avalanche_data")
+    logging.info("Retrieving weather stastions.")
 
     # Get the canadian weather station data
     pd.read_csv(
@@ -82,7 +90,9 @@ def main() -> None:
         index=False,
     )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
+    start = time.time()
     main()
-time_taken = time.time() - start
-print("Time to taken for extract_data.py to run: {}s.".format(round(time_taken, 3)))
+    time_taken = time.time() - start
+    print("Time to taken for extract_data.py to run: {}s.".format(round(time_taken, 3)))

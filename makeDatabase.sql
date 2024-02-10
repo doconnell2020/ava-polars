@@ -10,10 +10,9 @@ CREATE TABLE public.av_sites (
 
 ALTER TABLE public.av_sites OWNER TO david;
 
---
 -- TOC entry 208 (class 1259 OID 31442)
 -- Name: station_inv; Type: TABLE; Schema: public; Owner: david
---
+
 DROP TABLE IF EXISTS public.station_inv;
 CREATE TABLE public.station_inv (
     station_name character varying(100) NOT NULL,

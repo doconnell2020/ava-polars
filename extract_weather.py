@@ -29,9 +29,7 @@ def get_weather_daily(df: pd.DataFrame, url=url) -> str:
             str(df.iloc[i]["ob_date"].date()),
             df.iloc[i]["station_name"],
             df.iloc[i]["station_id"],
-        ).replace(
-            " ", "_"
-        )
+        ).replace(" ", "_")
         with open(output_file, "wb") as f:
             f.write(response.content)
     return "End of list."
@@ -66,9 +64,7 @@ def get_weather_daily_randoms(df: pd.DataFrame, url=url) -> str:
                 f"{year}_{month}_{day}",
                 df.iloc[i]["station_name"],
                 df.iloc[i]["station_id"],
-            ).replace(
-                " ", "_"
-            )
+            ).replace(" ", "_")
             try:
                 with open(output_file, "wb") as f:
                     f.write(response.content)
