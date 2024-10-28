@@ -74,9 +74,8 @@ def parse_utm(df: pd.DataFrame) -> tuple:
     """
     Processing function for UTM location type.
     """
-    coord_specs = df["location_coords_type"].str.strip("(assumed)").str.split()
-    zone = coord_specs.apply(lambda x: x[1])
-    datum = coord_specs.apply(lambda x: x[2])
+    coords = df["location_coords_type"].str.strip("(assumed)").str.split(expand=True)
+    _, zone, datum = coords[0], coords[1], coords[2]
     eastings, northings = split_coordinates(df["location_coords"])
 
     zone = zone.str.extract(r"^(\d+)", expand=False).values
@@ -126,12 +125,10 @@ utm_idx = new_df["location_coords_type"].str.startswith("UTM")
 
 new_df[["latitude", "longitude"]] = split_coordinates(new_df["location_coords"][lat_lng_idx])
 
-new_df[["latitude", "longitude"]][lat_lng_dd_idx] = split_coordinates(new_df["location_coords"][lat_lng_dd_idx])
+new_df[["latitude", "longitude"]] = split_coordinates(new_df["location_coords"][lat_lng_dd_idx])
 
 # Recall, the lats and longs in these rows are reversed, hence reverse assignment
-longs_3, lats_3 = split_coordinates(new_df["location_coords"][lat_lon_idx])
-new_df["latitude"].loc[lat_lon_idx] = lats_3
-new_df["longitude"].loc[lat_lon_idx] = longs_3
+new_df[["longitude", "latitude"]]  = split_coordinates(new_df["location_coords"][lat_lon_idx])
 
 logging.info("Starting UTM processing.")
 lats_4, longs_4 = parse_utm(new_df[utm_idx])
