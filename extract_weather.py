@@ -1,7 +1,8 @@
 import random
 import time
-import requests
+
 import pandas as pd
+import requests
 
 start = time.time()
 
@@ -30,6 +31,7 @@ def get_weather_daily(df: pd.DataFrame, url=url) -> str:
             df.iloc[i]["station_name"],
             df.iloc[i]["station_id"],
         ).replace(" ", "_")
+        print(f"Writing to file {output_file}")
         with open(output_file, "wb") as f:
             f.write(response.content)
     return "End of list."
@@ -81,7 +83,7 @@ def get_weather_daily_randoms(df: pd.DataFrame, url=url) -> str:
 
 get_weather_daily(df)
 
-get_weather_daily_randoms(df)
+# get_weather_daily_randoms(df)
 
 time_taken = time.time() - start
 print("Time to taken for extract_weather.py to run: {}s.".format(round(time_taken, 3)))

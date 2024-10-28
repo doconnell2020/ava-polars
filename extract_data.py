@@ -1,8 +1,9 @@
+import logging
 import time
+from typing import List
+
 import pandas as pd
 import requests
-from typing import List
-import logging
 
 logging.basicConfig(level=logging.INFO)
 

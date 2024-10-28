@@ -1,5 +1,5 @@
 """
-This script reads in the raw avalanche incident data and reprocesses the coordinate 
+This script reads in the raw avalanche incident data and reprocesses the coordinate
 information so that it is standardised.
 
 There are 4 categories of 'location_coords' in the source file,
@@ -16,13 +16,18 @@ Rules to think about
     3. Lat/Long Decimal Degrees : Correct
     4. UTM (starts with) : Remove letters, function parse
 """
+
+import logging
 import time
-from geopy.geocoders import Nominatim
+import warnings
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pyproj
-import warnings
+from geopy.geocoders import Nominatim
 
+logging.basicConfig(level=logging.INFO)
 start = time.time()
 
 warnings.filterwarnings("ignore")
@@ -57,9 +62,8 @@ def split_coordinates(series: pd.Series) -> tuple:
     """
     Splits the series from a point to individual latitude and longitude series.
     """
-    coordinates = series.str.strip("[]").str.split(", ")
-    latitude = coordinates.apply(lambda x: x[0])
-    longitude = coordinates.apply(lambda x: x[1])
+    coordinates = series.str.strip("[]").str.split(", ", expand=True)
+    latitude, longitude = coordinates
     return latitude, longitude
 
 
@@ -107,6 +111,7 @@ def is_within_canada(latitude: float, longitude: float) -> bool:
     return country == "Canada"
 
 
+logging.info("Creating indices.")
 # These two are in the correct position
 lat_lng_idx = new_df["location_coords_type"] == "Lat/lng"
 lat_lng_dd_idx = new_df["location_coords_type"] == "Lat/Long Decimal Degrees"
@@ -119,23 +124,20 @@ lat_lon_idx = new_df["location_coords_type"] == "LatLon"
 # the "assumed" word etc.
 utm_idx = new_df["location_coords_type"].str.startswith("UTM")
 
-lats_1, longs_1 = split_coordinates(new_df["location_coords"][lat_lng_idx])
-new_df["latitude"] = lats_1
-new_df["longitude"] = longs_1
+new_df[["latitude", "longitude"]] = split_coordinates(new_df["location_coords"][lat_lng_idx])
 
-lats_2, longs_2 = split_coordinates(new_df["location_coords"][lat_lng_dd_idx])
-new_df["latitude"][lat_lng_dd_idx] = lats_2
-new_df["longitude"][lat_lng_dd_idx] = longs_2
+new_df[["latitude", "longitude"]][lat_lng_dd_idx] = split_coordinates(new_df["location_coords"][lat_lng_dd_idx])
 
 # Recall, the lats and longs in these rows are reversed, hence reverse assignment
 longs_3, lats_3 = split_coordinates(new_df["location_coords"][lat_lon_idx])
 new_df["latitude"].loc[lat_lon_idx] = lats_3
 new_df["longitude"].loc[lat_lon_idx] = longs_3
 
-
+logging.info("Starting UTM processing.")
 lats_4, longs_4 = parse_utm(new_df[utm_idx])
 new_df["latitude"].loc[utm_idx] = lats_4
 new_df["longitude"].loc[utm_idx] = longs_4
+logging.info("UTM processing complete.")
 # --------------------------------------------------------------------------------------
 # Potential optimisation but unable to implement yet. Keep getting Index error or access
 # before assignment.
@@ -157,6 +159,7 @@ new_df["longitude"].loc[utm_idx] = longs_4
 
 
 ## Latittude cannot be >90. If it is, it is swapped with longitude
+logging.info("Sanity check latitudes.")
 new_df["latitude"] = abs(new_df["latitude"].astype(float))
 
 
@@ -172,16 +175,23 @@ new_df["longitude"] = -1 * abs(new_df["longitude"].astype(float))
 new_df["latitude"] = abs(new_df["latitude"].astype(float))
 
 new_df = new_df.dropna()
+logging.info("Sanity check: Within Canada.")
+# new_df["IsWithinCanada"] = new_df.apply(
+# lambda row: is_within_canada(row["latitude"], row["longitude"]), axis=1
+# )
+world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 
-new_df["IsWithinCanada"] = new_df.apply(
-    lambda row: is_within_canada(row["latitude"], row["longitude"]), axis=1
+can = world[world.name == "Canada"]
+data = gpd.GeoDataFrame(
+    new_df, geometry=gpd.points_from_xy(new_df.longitude, new_df.latitude)
 )
-
-new_df = new_df.loc[new_df["IsWithinCanada"] == True]  # noqa: E712
-
-new_df.drop(columns="IsWithinCanada").dropna().to_csv(
-    "./demo/data/can_avs_lat_long_date.csv", index=False
-)
+p = gpd.tools.sjoin(data, can, how="left")
+p = p.loc[p["index_right"] > 0]
+# new_df = new_df.loc[new_df["IsWithinCanada"] == True]  # noqa: E712
+logging.info("Canada check complete.")
+# new_df.drop(columns="IsWithinCanada").dropna().to_csv(
+# "./data/can_avs_lat_long_date.csv", index=False
+# )
 
 time_taken = time.time() - start
 print(

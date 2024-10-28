@@ -1,9 +1,10 @@
-import time
+import logging
 import multiprocessing
+import time
+from typing import List
+
 import pandas as pd
 import requests
-from typing import List
-import logging
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,7 +19,7 @@ def set_global_session():
 
 def get_URLs(initial_url: str) -> List[str]:
     """
-    Generates a List of URLs based on the expected format of the API enpoints and
+    Generates a List of URLs based on the expected format of the API endpoints and
     the number of events and events per page. This is ~15x faster than visiting
     each endpoint to find the next one.
     The `initial_url` acts as a jumping off point to begin the iteration.
@@ -32,7 +33,7 @@ def get_URLs(initial_url: str) -> List[str]:
     events_per_page = len(data["results"])
     num_pages = int(total_events / events_per_page) + 1
     if num_pages < 2:
-        pass
+        return urls
     else:
         for i in range(2, num_pages + 1):
             urls.append(f"{initial_url}&page={i}")
@@ -102,4 +103,4 @@ if __name__ == "__main__":
     start = time.time()
     main()
     time_taken = time.time() - start
-    print("Time to taken for extract_data.py to run: {}s.".format(round(time_taken, 3)))
+    print(f"Time to taken for extract_data.py to run: {round(time_taken, 3)}s.")
